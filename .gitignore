@@ -2,3 +2,13 @@ __pycache__/
 *.pyc
 .venv/
 .env
+
+# CodeValid — auto-added
+node_modules/
+dist/
+build/
+coverage/
+.next/
+out/
+.turbo/
+.pytest_cache/
