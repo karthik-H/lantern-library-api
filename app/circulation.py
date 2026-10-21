@@ -5,6 +5,8 @@ for a ready hold. When a copy frees up and members are waiting, the earliest wai
 becomes ready and keeps that copy for HOLD_READY_DAYS.
 """
 
+from datetime import datetime
+
 from . import config
 
 
@@ -63,3 +65,13 @@ def book_view(conn, book: dict) -> dict:
         "available_copies": max(book["total_copies"] - c["on_loan"] - c["ready_holds"], 0),
         "holds_waiting": c["waiting_holds"],
     }
+
+
+def days_late(due_at: datetime, returned_at: datetime) -> int:
+    """Whole days between the due date and the return, 0 when returned on time."""
+    return max((returned_at - due_at).days, 0)
+
+
+def late_fee_cents(due_at: datetime, returned_at: datetime) -> int:
+    fee = days_late(due_at, returned_at) * config.LATE_FEE_CENTS_PER_DAY
+    return min(fee, config.LATE_FEE_CAP_CENTS)
