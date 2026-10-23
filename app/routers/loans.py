@@ -1,4 +1,3 @@
-import math
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
@@ -28,14 +27,6 @@ def loan_view(loan: dict) -> dict:
         "renewals": loan["renewals"],
         "overdue": loan["returned_at"] is None and loan["due_at"] < now,
     }
-
-
-def late_fee_cents(due_at: datetime, returned_at: datetime) -> int:
-    seconds_late = (returned_at - due_at).total_seconds()
-    if seconds_late <= 0:
-        return 0
-    days_late = math.ceil(seconds_late / 86400)
-    return min(days_late * config.LATE_FEE_CENTS_PER_DAY, config.LATE_FEE_CAP_CENTS)
 
 
 @router.post("/loans", status_code=201)
@@ -144,7 +135,7 @@ def return_loan(loan_id: int, member: dict = Depends(current_member)):
         loan = conn.execute(
             "UPDATE loans SET returned_at = now() WHERE id = %s RETURNING *", (loan_id,)
         ).fetchone()
-        fee_cents = late_fee_cents(loan["due_at"], loan["returned_at"])
+        fee_cents = circulation.late_fee_cents(loan["due_at"], loan["returned_at"])
         fee = None
         if fee_cents > 0:
             fee = conn.execute(
