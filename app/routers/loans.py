@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
@@ -6,7 +7,7 @@ from pydantic import BaseModel
 from .. import circulation, config
 from ..db import transaction
 from ..errors import conflict, forbidden, not_found
-from ..security import current_member
+from ..security import current_member, optional_member
 
 router = APIRouter()
 
@@ -31,6 +32,7 @@ def loan_view(loan: dict) -> dict:
 
 @router.post("/loans", status_code=201)
 def borrow(body: BorrowBody, member: dict = Depends(current_member)):
+    time.sleep(config.BORROW_FAIR_USE_PAUSE_SECONDS)
     with transaction() as conn:
         book = circulation.lock_book(conn, body.book_id)
         if book is None:
@@ -126,9 +128,15 @@ def renew(loan_id: int, member: dict = Depends(current_member)):
 
 
 @router.post("/loans/{loan_id}/return")
-def return_loan(loan_id: int, member: dict = Depends(current_member)):
+def return_loan(loan_id: int, member: dict | None = Depends(optional_member)):
+    """Borrower or staff; a self-service kiosk returns by loan id without signing in."""
     with transaction() as conn:
-        loan = _load_loan(conn, loan_id, member)
+        if member is None:
+            loan = conn.execute("SELECT * FROM loans WHERE id = %s FOR UPDATE", (loan_id,)).fetchone()
+            if loan is None:
+                raise not_found("loan not found")
+        else:
+            loan = _load_loan(conn, loan_id, member)
         if loan["returned_at"] is not None:
             raise conflict("loan already returned")
         book = circulation.lock_book(conn, loan["book_id"])

@@ -47,6 +47,13 @@ def current_member(request: Request) -> dict:
     return member
 
 
+def optional_member(request: Request) -> dict | None:
+    """The signed-in member, or None when the request carries no token (self-service kiosks)."""
+    if not request.headers.get("authorization"):
+        return None
+    return current_member(request)
+
+
 def staff_member(member: dict = Depends(current_member)) -> dict:
     if member["role"] != "staff":
         raise forbidden()

@@ -23,3 +23,5 @@ HOLD_READY_DAYS = 3
 LATE_FEE_CENTS_PER_DAY = 25
 LATE_FEE_CAP_CENTS = 1000
 BORROW_BLOCK_FEES_CENTS = 500
+# Fair use: a short pause before each borrow so one account cannot drain copies in a burst.
+BORROW_FAIR_USE_PAUSE_SECONDS = 0.25
